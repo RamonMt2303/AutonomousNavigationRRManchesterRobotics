@@ -1,0 +1,151 @@
+<?xml version="1.0"?>
+<robot name="Puzzlebot Jetson-Lidar Ed.">
+
+
+<!-- Dummy link to fiz robot chassis -->
+  <link name="base_link">
+  </link>
+  
+    <joint name="chassis_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="chassis"/>
+        <origin xyz="0.0 0.0 0.05"/>
+    </joint>
+
+    <link name="chassis">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.01" />
+            <inertia ixx="7.58333333333e-06" ixy="0.0" ixz="0.0" iyy="7.58333333333e-06" iyz="0.0" izz="1.25e-05"/>
+        </inertial>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_13_Chassis.stl"/>
+            </geometry>
+        </collision>
+        <visual>
+            <origin rpy="1.57079632679 0 1.57079632679" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_13_Chassis.stl"/>
+            </geometry>
+        </visual>
+    </link>
+
+    <joint name="rw_joint" type="revolute">
+        <parent link="chassis"/>
+        <child link="rw"/>
+        <origin xyz="0.05 -0.087 0.0046"/>
+        <axis xyz="0 1 0"/>
+        <limit lower="-3.1416" upper="3.1416" effort="100" velocity="3.14"/>
+        <!-- Adjust the limit and velocity according to your requirements -->
+    </joint>
+
+    <link name="rw">
+        <inertial>
+            <origin xyz="0.0 0.0 0.0046" rpy="0 0 0"/>
+            <mass value="0.01" />
+            <inertia ixx="7.58333333333e-06" ixy="0.0" ixz="0.0" iyy="7.58333333333e-06" iyz="0.0" izz="1.25e-05"/>
+        </inertial>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot//models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+            </geometry>
+        </collision>
+        <visual>
+            <origin rpy="-1.5708 0 0" xyz="0.0 -0.011 -0.002"/>
+            <geometry>
+                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+            </geometry>
+        </visual>
+    </link>
+
+    <joint name="lw_joint" type="revolute">
+        <parent link="chassis"/>
+        <child link="lw"/>
+        <origin xyz="0.05 0.087 0.0046"/>
+        <axis xyz="0 1 0"/>
+        <limit lower="-3.1416" upper="3.1416" effort="100" velocity="3.14"/>
+        <!-- Adjust the limit and velocity according to your requirements -->
+    </joint>
+
+    <link name="lw">
+        <inertial>
+            <origin xyz="0.0 0.0 0.0046" rpy="0 0 0"/>
+            <mass value="0.01" />
+            <inertia ixx="7.58333333333e-06" ixy="0.0" ixz="0.0" iyy="7.58333333333e-06" iyz="0.0" izz="1.25e-05"/>
+        </inertial>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+            </geometry>
+        </collision>
+        <visual>
+            <origin rpy="1.5708 0 0" xyz="0.0 0.011 -0.002"/>
+            <geometry>
+                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+            </geometry>
+        </visual>
+    </link>
+
+    <!-- Supports for wheels -->
+    <joint name="rw_support_joint" type="fixed">
+        <parent link="rw"/>
+        <child link="rw_support"/>
+        <origin xyz="0.0 0.0 -0.0046"/>
+    </joint>
+
+    <link name="rw_support">
+        <inertial>
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+        <mass value="0.0" />
+        <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+        </inertial>
+        <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <box size="0.02 0.02 0.002"/>
+        </geometry>
+        </collision>
+        <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <box size="0.02 0.02 0.002"/>
+        </geometry>
+        </visual>
+    </link>
+
+    <joint name="lw_support_joint" type="fixed">
+        <parent link="lw"/>
+        <child link="lw_support"/>
+        <origin xyz="0.0 0.0 -0.0046"/>
+    </joint>
+
+    <link name="lw_support">
+        <inertial>
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+        <mass value="0.0" />
+        <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+        </inertial>
+        <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <box size="0.02 0.02 0.002"/>
+        </geometry>
+        </collision>
+        <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <box size="0.02 0.02 0.002"/>
+        </geometry>
+        </visual>
+    </link>
+
+
+
+<!-- FINISH THE URDF-->
+
+
+</robot>
