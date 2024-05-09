@@ -22,11 +22,6 @@ class MoveFClass():
             print("no simulated time has been received yet") 
         start_time = rospy.get_time()  #Get the current time in float seconds 
 
-        #Compute the neccesary time to move 90 degrees
-        desired_angle = np.pi/2.0 #90°
-        angular_speed = 0.5 #[rad/s]
-        turning_period = desired_angle/angular_speed
-
         while not rospy.is_shutdown(): 
 
             if (rospy.get_time() - start_time) <= period: # If we haven't reached the desired "period" of time [s] then move. 

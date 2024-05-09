@@ -47,10 +47,15 @@ class OdomClass():
 
         self.odom = Odometry()
 
+        #Gains for wl and wr
+        self.kl = 0.2
+        self.kr = 0.4
 
-        self.mu = np.array([0.0, 0.0, 0.0]) #X Y Theta
+        self.sigma_k = np.array([[0.0, 0.0], [0.0, 0.0]])
 
-        self.Q = np.array([[0.0002, 0.0001, 0.0001], [0.0001, 0.0002, 0.0001],[0.0001, 0.0001, 0.0002]])
+        self.mu = np.array([[0.0], [0.0], [0.0]]) #X Y Theta
+
+        print(self.mu)
         
         self.sigma = np.eye(3)
 
@@ -65,15 +70,27 @@ class OdomClass():
 
             self.get_robot_vel() 
 
-            self.H = np.array([[1.0, 0.0, -(self.dt * self.v * np.sin(self.theta))], 
-                               [0.0, 1.0, self.dt * self.v * np.cos(self.theta)], 
+            self.sigma_k[0][0] = self.kr * np.abs(self.wr)
+            self.sigma_k[1][1] = self.kl * np.abs(self.wl)
+
+            print(self.sigma_k)
+
+            self.gradient_w = 0.5 * self.r * self.dt * (np.array([[np.cos(self.theta_ant), np.cos(self.theta_ant)], 
+                                                                  [np.sin(self.theta_ant), np.sin(self.theta_ant)], 
+                                                                  [2.0/self.L, -2.0/self.L]]))
+
+
+            self.Q = self.gradient_w @ self.sigma_k @ self.gradient_w.T
+
+
+            self.H = np.array([[1.0, 0.0, -(self.dt * self.v * np.sin(self.theta_ant))], 
+                               [0.0, 1.0, self.dt * self.v * np.cos(self.theta_ant)], 
                                [0.0, 0.0, 1.0]])
 
-            self.mu = np.array([[self.mu[0] + (self.v * self.dt * np.cos(self.mu[2]))],
-                                [self.mu[1] + (self.v * self.dt * np.sin(self.mu[2]))],
-                                [self.mu[2] + (self.dt * self.w)]])
-            
-            print(self.mu)
+            self.mu = np.array([[self.x + (self.v * self.dt * np.cos(self.theta))],
+                                [self.y + (self.v * self.dt * np.sin(self.theta))],
+                                [self.theta + (self.dt * self.w)]])
+             
             
             self.sigma = self.H.dot(self.sigma).dot(self.H.T) + self.Q
 
@@ -113,16 +130,15 @@ class OdomClass():
         self.odom.pose.pose.orientation.w = quat[3] 
 
         # Init a 36 elements array 
-        self.odom.pose.covariance = [0.0]*36 
-        self.odom.pose.covariance[0] = Sigma[0][0] * Sigma[0][0]#variance in x
-        self.odom.pose.covariance[1] = Sigma[0][0] * Sigma[1][1]
-        self.odom.pose.covariance[5] = Sigma[0][0] * Sigma[2][2]
-        self.odom.pose.covariance[6] = Sigma[1][1] * Sigma[0][0]
-        self.odom.pose.covariance[7] = Sigma[1][1] * Sigma[1][1]#variance in y
-        self.odom.pose.covariance[11] = Sigma[1][1] * Sigma[2][2]
-        self.odom.pose.covariance[30] = Sigma[2][2] * Sigma[0][0]
-        self.odom.pose.covariance [31] = Sigma[2][2] * Sigma[1][1]
-        self.odom.pose.covariance[35] = Sigma[2][2] * Sigma[2][2] #variance in theta
+        odom_array = np.array([[Sigma[0][0], Sigma[0][1], 0, 0, 0, Sigma[0][2]],
+                                              [Sigma[1][0], Sigma[1][1], 0.0, 0, 0, Sigma[1][2]],
+                                              [0, 0, 0, 0, 0, 0],
+                                              [0, 0, 0, 0, 0, 0],
+                                              [0, 0, 0, 0, 0, 0],
+                                              [Sigma[2][0], Sigma[2][1], 0, 0, 0, Sigma[2][2]]
+        ])
+
+        self.odom.pose.covariance = odom_array.flatten().tolist()
 
         # Fill the speed information 
         self.odom.twist.twist.linear.x = self.v 
@@ -155,7 +171,7 @@ class OdomClass():
             pose.position.z = 0 
             #The angle will be a random number from -pi to pi 
             theta = np.random.normal(0,0.1,1)*np.pi 
-            quat = quaternion_from_euler(0.0, 0.0, self.theta) 
+            quat = quaternion_from_euler(0.0, 0.0, theta) 
             pose.orientation.x = quat[0] 
             pose.orientation.y = quat[1] 
             pose.orientation.z = quat[2] 

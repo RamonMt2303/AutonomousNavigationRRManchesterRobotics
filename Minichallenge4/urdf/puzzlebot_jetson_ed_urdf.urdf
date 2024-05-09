@@ -21,13 +21,13 @@
         <collision>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_13_Chassis.stl"/>
+                <mesh filename="package://Minichallenge4/models/MCR2_1000_13_Chassis.stl"/>
             </geometry>
         </collision>
         <visual>
             <origin rpy="1.57079632679 0 1.57079632679" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_13_Chassis.stl"/>
+                <mesh filename="package://Minichallenge4/models/MCR2_1000_13_Chassis.stl"/>
             </geometry>
         </visual>
     </link>
@@ -50,13 +50,13 @@
         <collision>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot//models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+                <mesh filename="package://Minichallenge4//models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
             </geometry>
         </collision>
         <visual>
             <origin rpy="-1.5708 0 0" xyz="0.0 -0.011 -0.002"/>
             <geometry>
-                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+                <mesh filename="package://Minichallenge4/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
             </geometry>
         </visual>
     </link>
@@ -79,13 +79,13 @@
         <collision>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+                <mesh filename="package://Minichallenge4/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
             </geometry>
         </collision>
         <visual>
             <origin rpy="1.5708 0 0" xyz="0.0 0.011 -0.002"/>
             <geometry>
-                <mesh filename="package://robotRangers__autonomousNavigation_puzzleBot/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
+                <mesh filename="package://Minichallenge4/models/MCR2_1000_1_1_Wheel_Coupler_2.stl"/>
             </geometry>
         </visual>
     </link>
