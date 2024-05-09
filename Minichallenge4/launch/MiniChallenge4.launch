@@ -3,8 +3,9 @@
     <!-- Load the URDF into the parameter server -->
     <param name="robot_description" textfile="$(find Minichallenge4)/urdf/puzzlebot_jetson_ed_urdf.urdf"/>
 
-    <node name="input" pkg="Minichallenge4" type="set_point.py" output="screen"/>
-    <node name="controller" pkg="Minichallenge4" type="controller.py" output="screen"/>
+    <!-- <node name="input" pkg="Minichallenge4" type="set_point.py" output="screen"/> -->
+    <!-- <node name="controller" pkg="Minichallenge4" type="controller.py" output="screen"/> -->
+    <node name="move_forward_test" pkg="Minichallenge4" type="move_forward_test.py" output="screen"/>
     <node name="puzzlebot_kinematic_model" pkg="Minichallenge4" type="puzzlebot_kinematic_model.py" output="screen"/>
     <node name="localisation" pkg="Minichallenge4" type="localisation.py" output="screen"/>
     <node name="tf_transform" pkg="Minichallenge4" type="tf_transform.py" output="screen"/>

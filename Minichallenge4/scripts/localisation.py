@@ -4,10 +4,9 @@ import rospy
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32 
 from tf.transformations import quaternion_from_euler 
+from geometry_msgs.msg import PoseArray, Pose 
 import numpy as np 
 from geometry_msgs.msg import TransformStamped
-import tf2_ros
-from tf2_msgs.msg import TFMessage
  
 #This class will do the following: 
 #   subscribe to /wr and /wl
@@ -22,9 +21,13 @@ class OdomClass():
         rospy.Subscriber("wl", Float32, self.wl_cb) 
         rospy.Subscriber("wr", Float32, self.wr_cb) 
         # Create ROS publishers 
-        self.odom_pub = rospy.Publisher('odom', Odometry ,queue_size=1) #Publisher to pose_sim topic 
+        self.odom_pub = rospy.Publisher('odom', Odometry ,queue_size=1) #Publisher to odom topic 
+        self.pose_array_pub = rospy.Publisher("pose_array_topic", PoseArray, queue_size=1) #Publisher to pose array topic 
 
         t = TransformStamped() 
+
+        # Create a PoseArray message 
+        self.pose_array_msg = PoseArray() 
 
         ############ ROBOT CONSTANTS ################  
         self.r = 0.05 #puzzlebot wheel radius [m] 
@@ -51,6 +54,11 @@ class OdomClass():
         
         self.sigma = np.eye(3)
 
+        self.get_pose_array()
+
+        # Set the header information (frame ID and timestamp) 
+        self.pose_array_msg.header.frame_id = 'odom' 
+        self.pose_array_msg.header.stamp = rospy.Time.now() 
                 
         rate = rospy.Rate(int(1.0/self.dt)) # The rate of the while loop will be the inverse of the desired delta_t 
         while not rospy.is_shutdown(): 
@@ -65,10 +73,14 @@ class OdomClass():
                                 [self.mu[1] + (self.v * self.dt * np.sin(self.mu[2]))],
                                 [self.mu[2] + (self.dt * self.w)]])
             
+            print(self.mu)
+            
             self.sigma = self.H.dot(self.sigma).dot(self.H.T) + self.Q
 
             self.update_robot_pose()
             self.get_pose_odometry(self.theta, self.sigma)
+
+            self.pose_array_pub.publish(self.pose_array_msg)
 
             rate.sleep() 
 
@@ -109,7 +121,7 @@ class OdomClass():
         self.odom.pose.covariance[7] = Sigma[1][1] * Sigma[1][1]#variance in y
         self.odom.pose.covariance[11] = Sigma[1][1] * Sigma[2][2]
         self.odom.pose.covariance[30] = Sigma[2][2] * Sigma[0][0]
-        self.odom.pose.covariance[31] = Sigma[2][2] * Sigma[1][1]
+        self.odom.pose.covariance [31] = Sigma[2][2] * Sigma[1][1]
         self.odom.pose.covariance[35] = Sigma[2][2] * Sigma[2][2] #variance in theta
 
         # Fill the speed information 
@@ -131,6 +143,25 @@ class OdomClass():
         self.y_ant = self.y
         self.theta_ant = self.theta
         
+    def get_pose_array(self):
+        for i in range(50): 
+            pose = Pose() 
+            # The position will be a random number with normal distribution 
+            # NOTE: this is just an example  
+            # you will have to fill the pose information (x,y,theta) with the  
+            # results from your different experiments.  
+            pose.position.x = 1+np.random.normal(0,0.3,1) # mean 0 and standard deviation 0.3 
+            pose.position.y = np.random.normal(0,0.1,1) # mean 0 and standard deviation 0.1 
+            pose.position.z = 0 
+            #The angle will be a random number from -pi to pi 
+            theta = np.random.normal(0,0.1,1)*np.pi 
+            quat = quaternion_from_euler(0.0, 0.0, self.theta) 
+            pose.orientation.x = quat[0] 
+            pose.orientation.y = quat[1] 
+            pose.orientation.z = quat[2] 
+            pose.orientation.w = quat[3] 
+            pose.orientation.w = 1.0 
+            self.pose_array_msg.poses.append(pose) 
 
 
  
