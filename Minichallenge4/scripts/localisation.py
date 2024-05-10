@@ -45,11 +45,22 @@ class OdomClass():
         self.theta = 0.0  
         self.theta_ant = 0.0
 
+        self.Xmedida = [2.16, 2.16, 2.175, 2.16, 2.16, 2.165, 2.15, 2.16, 2.16, 2.175,
+                    2.16, 2.15, 2.18, 2.16, 2.17, 2.165, 2.16, 2.155, 2.15, 2.17,
+                    2.13, 2.13, 2.18, 2.11, 2.11, 2.14, 2.13, 2.12, 2.13, 2.13,
+                    2.09, 2.08, 2.11, 2.09, 2.06, 2.15, 2.1, 2.11, 2.12, 2.06]
+        ##Valores de la posicion obtenidos en y 
+        self.Ymedida = [-0.07, -0.04, -0.01, -0.06, -0.07, -0.05, -0.04, -0.095,
+                    -0.01, -0.01, -0.01, -0.085, 0.05, 0.065, 0.08, 0.025,
+                    0.02, -0.01, -0.035, 0.07, 0.01, 0.025, 0.038, 0.062,
+                    0.052, 0.065, 0.09, 0.025, 0.09, 0.05, 0.055, 0.01,
+                    0.07, 0.08, 0.05, 0.012, 0.05, 0.04, 0.012, 0.025]
+
         self.odom = Odometry()
 
         #Gains for wl and wr
-        self.kl = 0.2
-        self.kr = 0.4
+        self.kl = 10.0
+        self.kr = 10.0
 
         self.sigma_k = np.array([[0.0, 0.0], [0.0, 0.0]])
 
@@ -69,9 +80,14 @@ class OdomClass():
         while not rospy.is_shutdown(): 
 
             self.get_robot_vel() 
+            self.update_robot_pose()
+            self.get_pose_odometry(self.theta, self.sigma)
 
             self.sigma_k[0][0] = self.kr * np.abs(self.wr)
             self.sigma_k[1][1] = self.kl * np.abs(self.wl)
+
+            #self.sigma_k = np.array([[self.kr * np.abs(self.wr), 0],
+                                     #[0, self.kl * np.abs(self.wl)]])
 
             print(self.sigma_k)
 
@@ -80,6 +96,7 @@ class OdomClass():
                                                                   [2.0/self.L, -2.0/self.L]]))
 
 
+            #self.Q = self.gradient_w.dot(self.sigma_k).dot(self.gradient_w.T)
             self.Q = self.gradient_w @ self.sigma_k @ self.gradient_w.T
 
 
@@ -94,8 +111,8 @@ class OdomClass():
             
             self.sigma = self.H.dot(self.sigma).dot(self.H.T) + self.Q
 
-            self.update_robot_pose()
-            self.get_pose_odometry(self.theta, self.sigma)
+            #self.update_robot_pose()
+            #self.get_pose_odometry(self.theta, self.sigma)
 
             self.pose_array_pub.publish(self.pose_array_msg)
 
@@ -160,17 +177,13 @@ class OdomClass():
         self.theta_ant = self.theta
         
     def get_pose_array(self):
-        for i in range(50): 
-            pose = Pose() 
-            # The position will be a random number with normal distribution 
-            # NOTE: this is just an example  
-            # you will have to fill the pose information (x,y,theta) with the  
-            # results from your different experiments.  
-            pose.position.x = 1+np.random.normal(0,0.3,1) # mean 0 and standard deviation 0.3 
-            pose.position.y = np.random.normal(0,0.1,1) # mean 0 and standard deviation 0.1 
-            pose.position.z = 0 
-            #The angle will be a random number from -pi to pi 
-            theta = np.random.normal(0,0.1,1)*np.pi 
+        for i in range(len(self.Xmedida)):
+            pose = Pose()
+            pose.position.x = self.Xmedida[i]
+            pose.position.y = self.Ymedida[i]
+            pose.position.z = 0
+
+            theta = 0
             quat = quaternion_from_euler(0.0, 0.0, theta) 
             pose.orientation.x = quat[0] 
             pose.orientation.y = quat[1] 

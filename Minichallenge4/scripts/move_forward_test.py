@@ -14,7 +14,7 @@ class MoveFClass():
         self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=1) 
         my_twist = Twist() # create a twist message, fill in the details      
 
-        period = 5.0 #How much time the robot will move [seconds] 
+        period = 20.0 #How much time the robot will move [seconds] 
         rate = rospy.Rate(10) # The rate of the while loop will be 50Hz 
         rospy.loginfo("About to be moving forward!") 
 
@@ -28,7 +28,7 @@ class MoveFClass():
                 rospy.loginfo("moving forward!") 
                 # Fill in the message with the required data 
                 # If we move at 0.2 m/s for 5.0 seconds we will move in the end 1m.  
-                my_twist.linear.x = 0.2   # our forward speed in [m/s]. (0.2[m/s]*5[s]) = 1[m] 
+                my_twist.linear.x = 0.1   # our forward speed in [m/s]. (0.2[m/s]*5[s]) = 1[m] 
                 my_twist.angular.z = 0    # Our angular speed in [rad/s], (In this case the robot does not rotate)                      
             else:
                 rospy.loginfo("stopping!") 
