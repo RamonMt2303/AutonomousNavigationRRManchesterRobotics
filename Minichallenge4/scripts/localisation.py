@@ -49,6 +49,7 @@ class OdomClass():
                     2.16, 2.15, 2.18, 2.16, 2.17, 2.165, 2.16, 2.155, 2.15, 2.17,
                     2.13, 2.13, 2.18, 2.11, 2.11, 2.14, 2.13, 2.12, 2.13, 2.13,
                     2.09, 2.08, 2.11, 2.09, 2.06, 2.15, 2.1, 2.11, 2.12, 2.06]
+        
         ##Valores de la posicion obtenidos en y 
         self.Ymedida = [-0.07, -0.04, -0.01, -0.06, -0.07, -0.05, -0.04, -0.095,
                     -0.01, -0.01, -0.01, -0.085, 0.05, 0.065, 0.08, 0.025,
@@ -59,16 +60,14 @@ class OdomClass():
         self.odom = Odometry()
 
         #Gains for wl and wr
-        self.kl = 10.0
-        self.kr = 10.0
+        self.kl = 0.3
+        self.kr = 0.25
 
         self.sigma_k = np.array([[0.0, 0.0], [0.0, 0.0]])
 
         self.mu = np.array([[0.0], [0.0], [0.0]]) #X Y Theta
-
-        print(self.mu)
         
-        self.sigma = np.eye(3)
+        self.sigma = np.zeros((3,3))
 
         self.get_pose_array()
 
@@ -89,7 +88,7 @@ class OdomClass():
             #self.sigma_k = np.array([[self.kr * np.abs(self.wr), 0],
                                      #[0, self.kl * np.abs(self.wl)]])
 
-            print(self.sigma_k)
+            print("Sigma K: " + str(self.sigma_k))
 
             self.gradient_w = 0.5 * self.r * self.dt * (np.array([[np.cos(self.theta_ant), np.cos(self.theta_ant)], 
                                                                   [np.sin(self.theta_ant), np.sin(self.theta_ant)], 
@@ -110,6 +109,8 @@ class OdomClass():
              
             
             self.sigma = self.H.dot(self.sigma).dot(self.H.T) + self.Q
+
+            print("Sigma: " + str(self.sigma))
 
             #self.update_robot_pose()
             #self.get_pose_odometry(self.theta, self.sigma)

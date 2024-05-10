@@ -22,14 +22,22 @@ class MoveFClass():
             print("no simulated time has been received yet") 
         start_time = rospy.get_time()  #Get the current time in float seconds 
 
-        while not rospy.is_shutdown(): 
+        desire_angle = np.pi/2.0
+        angular_speed = 0.5 
+        turning_period  = desire_angle/angular_speed
 
+        while not rospy.is_shutdown(): 
+            
             if (rospy.get_time() - start_time) <= period: # If we haven't reached the desired "period" of time [s] then move. 
                 rospy.loginfo("moving forward!") 
                 # Fill in the message with the required data 
                 # If we move at 0.2 m/s for 5.0 seconds we will move in the end 1m.  
                 my_twist.linear.x = 0.1   # our forward speed in [m/s]. (0.2[m/s]*5[s]) = 1[m] 
-                my_twist.angular.z = 0    # Our angular speed in [rad/s], (In this case the robot does not rotate)                      
+                my_twist.angular.z = 0    # Our angular speed in [rad/s], (In this case the robot does not rotate)
+            elif (rospy.get_time()-start_time) <= period/4.0 + turning_period:
+                rospy.loginfo("turning")
+                my_twist.linear.x = 0.0   
+                my_twist.angular.z = angular_speed    # Our angular speed in [rad/s], (In this case the robot does not rotate)  
             else:
                 rospy.loginfo("stopping!") 
                 my_twist.linear.x = 0.0

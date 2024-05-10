@@ -17,7 +17,7 @@ class path_generator():
 
         ############ CONSTANTS AND VARIABLES ################  
         self.flag = 0
-        self.data = [[1,0]]
+        self.data = [[0,0], [2,0], [2,2], [0,2], [0,0]]
         self.i = 0
         self.goal = Pose()
         self.r = rospy.Rate(20) #20 Hz 
@@ -48,7 +48,7 @@ class path_generator():
 ############################### MAIN PROGRAM ####################################  
 
 if __name__ == "__main__":  
-    rospy.init_node("input", anonymous=True)  
+    rospy.init_node("Set_point_generator", anonymous=True)  
     path_generator() 
 
 

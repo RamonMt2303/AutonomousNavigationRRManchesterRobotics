@@ -60,7 +60,7 @@ class GoToGoal():
         self.u_a=[0.0,0.0]
         #u[0] salida actual    u[1] salida anterior
 
-        Ts = 0.002 
+        Ts = 0.02 
         #periodo de muestreo
 
         #ganancias del modelo discreto
@@ -85,7 +85,7 @@ class GoToGoal():
         w = 0.0 # Robot's angular speed [rad/s] 
         self.wl = 0.0 # left wheel angular speed [rad/s] 
         self.wr = 0.0 # right wheel angular speed [rad/s] 
-        d=10000000.0 
+        d=2.0 
         d_min = 0.1 #[m] d_min to the goal to declare the robot arrived  
 
         while rospy.get_time == 0: 
@@ -93,7 +93,7 @@ class GoToGoal():
         print("I got a valid time") 
 
         previous_time = rospy.get_time() #I will use this to compute delta_t 
-        rate = rospy.Rate(20) #20Hz  
+        rate = rospy.Rate(1/Ts) #20Hz  
         print("Node initialized") 
 
         while not rospy.is_shutdown(): 
