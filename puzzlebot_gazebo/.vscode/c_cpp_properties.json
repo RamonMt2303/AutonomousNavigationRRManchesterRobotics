@@ -1,0 +1,23 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/opt/ros/noetic/include/**",
+        "/home/delizabeth/catkin_ws/src/AutonomousNavigationRRManchesterRobotics/Minichallenge5/include/**",
+        "/home/delizabeth/catkin_ws/src/beginner_tutorials/include/**",
+        "/home/delizabeth/catkin_ws/src/puzzlebot_sim/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
