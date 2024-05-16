@@ -17,7 +17,7 @@ class path_generator():
 
         ############ CONSTANTS AND VARIABLES ################  
         self.flag = 0
-        self.data = [[0,0], [2,0], [2,2], [0,2], [0,0]]
+        self.data = [[1.5, 1.2], [-1.15, 1.5], [2,2], [0,2], [0,0]]
         self.i = 0
         self.goal = Pose()
         self.r = rospy.Rate(20) #20 Hz 
