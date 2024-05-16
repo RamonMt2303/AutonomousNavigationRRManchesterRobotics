@@ -29,8 +29,8 @@ class Joint_State():
         self.l_orientation = Quaternion(0.0, 0.0, 0.0, 1.0)  # Identidad (sin rotación)
         self.r_orientation = Quaternion(0.0, 0.0, 0.0, 1.0)  # Identidad (sin rotación)
 
-        rospy.Subscriber("wl", Float32, self.wl_cb) 
-        rospy.Subscriber("wr", Float32, self.wr_cb) 
+        rospy.Subscriber("puzzlebot_1/wl", Float32, self.wl_cb) 
+        rospy.Subscriber("puzzlebot_1/wr", Float32, self.wr_cb) 
 
         joint_pub = rospy.Publisher('/joint_states', JointState, queue_size=1)
 

@@ -1,19 +1,20 @@
 <?xml version="1.0" ?>
 <launch>
     <!-- Load the URDF into the parameter server -->
-    <param name="robot_description" textfile="$(find Minichallenge4)/urdf/puzzlebot_jetson_ed_urdf.urdf"/>
+    <!--<param name="robot_description" textfile="$(find Minichallenge4)/urdf/puzzlebot_jetson_ed_urdf.urdf"/>-->
 
     <node name="Set_point_generator" pkg="Minichallenge4" type="set_point.py" output="screen"/> 
-    <node name="controller" pkg="Minichallenge4" type="controller.py" output="screen"/> 
+    <!--<node name="controller" pkg="Minichallenge4" type="controller.py" output="screen"/>-->
     <!-- <node name="move_forward_test" pkg="Minichallenge4" type="move_forward_test.py" output="screen"/> -->
     <node name="puzzlebot_kinematic_model" pkg="Minichallenge4" type="puzzlebot_kinematic_model.py" output="screen"/>
     <node name="localisation" pkg="Minichallenge4" type="localisation.py" output="screen"/>
-    <node name="tf_transform" pkg="Minichallenge4" type="tf_transform.py" output="screen"/>
+    <node name="bug0" pkg = "Minichallenge4" type = "bug0.py" output = "screen"/>
+    <!--<node name="tf_transform" pkg="Minichallenge4" type="tf_transform.py" output="screen"/>-->
     <!-- <node name= "rqt_plot" pkg="rqt_plot" type="rqt_plot" output="screen"/> -->
-    <node pkg="rviz" type="rviz" name="rviz_config" args="-d $(find Minichallenge4)/mini_challenge4_config.rviz"/>
+    <!--<node pkg="rviz" type="rviz" name="rviz_config" args="-d $(find Minichallenge4)/mini_challenge4_config.rviz"/>-->
 
     <!-- Publish TF static transforms found in xacro/urdf file -->
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" 
-    respawn="false" output="screen"/>
+    <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" 
+    respawn="false" output="screen"/>-->
     <node name="Joint_State_Publisher" pkg="Minichallenge4" type="joint_state_publisher.py" output="screen"/>
 </launch>

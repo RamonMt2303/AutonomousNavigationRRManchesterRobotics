@@ -29,12 +29,12 @@ class PuzzlebotKinClass():
 
         ###******* INIT PUBLISHERS *******###  
         # Create the subscriber to cmd_vel topic 
-        rospy.Subscriber("cmd_vel", Twist, self.cmd_vel_cb) 
+        rospy.Subscriber("puzzlebot_1/base_controller/cmd_vel", Twist, self.cmd_vel_cb) 
 
         # Create ROS publishers 
         self.pose_sim_pub = rospy.Publisher('pose_sim', PoseStamped ,queue_size=1) #Publisher to pose_sim topic 
-        self.wr_pub = rospy.Publisher('wr', Float32 ,queue_size=1) # Publisher to wr topic 
-        self.wl_pub = rospy.Publisher('wl', Float32 ,queue_size=1) # Publisher to wl topic 
+        self.wr_pub = rospy.Publisher('puzzlebot_1/wr', Float32 ,queue_size=1) # Publisher to wr topic 
+        self.wl_pub = rospy.Publisher('puzzlebot_1/wl', Float32 ,queue_size=1) # Publisher to wl topic 
 
          
 

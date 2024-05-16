@@ -18,8 +18,8 @@ class OdomClass():
         rospy.init_node('localisation') 
         ###******* INIT PUBLISHERS *******###  
         # Create the subscriber to cmd_vel topic 
-        rospy.Subscriber("wl", Float32, self.wl_cb) 
-        rospy.Subscriber("wr", Float32, self.wr_cb) 
+        rospy.Subscriber("puzzlebot_1/wl", Float32, self.wl_cb) 
+        rospy.Subscriber("puzzlebot_1/wr", Float32, self.wr_cb) 
         # Create ROS publishers 
         self.odom_pub = rospy.Publisher('odom', Odometry ,queue_size=1) #Publisher to odom topic 
         self.pose_array_pub = rospy.Publisher("pose_array_topic", PoseArray, queue_size=1) #Publisher to pose array topic 
@@ -88,7 +88,7 @@ class OdomClass():
             #self.sigma_k = np.array([[self.kr * np.abs(self.wr), 0],
                                      #[0, self.kl * np.abs(self.wl)]])
 
-            print("Sigma K: " + str(self.sigma_k))
+           
 
             self.gradient_w = 0.5 * self.r * self.dt * (np.array([[np.cos(self.theta_ant), np.cos(self.theta_ant)], 
                                                                   [np.sin(self.theta_ant), np.sin(self.theta_ant)], 
@@ -110,7 +110,7 @@ class OdomClass():
             
             self.sigma = self.H.dot(self.sigma).dot(self.H.T) + self.Q
 
-            print("Sigma: " + str(self.sigma))
+           
 
             #self.update_robot_pose()
             #self.get_pose_odometry(self.theta, self.sigma)

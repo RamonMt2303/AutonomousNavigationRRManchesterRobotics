@@ -13,25 +13,28 @@ class path_generator():
         rospy.on_shutdown(self.cleanup) #This function will be called before killing the node. 
         #########PUBLISHERS AND SUBSCRIBERS ################# 
         self.goal_pub = rospy.Publisher('set_point', Pose, queue_size=1)  
+        self.pub_cmd_vel = rospy.Publisher('puzzlebot_1/base_controller/cmd_vel', Twist, queue_size=1)  
         rospy.Subscriber("flag", Float32, self.flag_cb) 
 
         ############ CONSTANTS AND VARIABLES ################  
         self.flag = 0
-        self.data = [[1.5, 1.2], [-1.15, 1.5], [2,2], [0,2], [0,0]]
+        self.data = [[1.5, 1.2], [-1.15, 1.5], [0.0, -2.5], [0,-2.5]]
         self.i = 0
         self.goal = Pose()
-        self.r = rospy.Rate(20) #20 Hz 
+        self.cmd_vel_pub = Twist()
+        self.r = rospy.Rate(50) #20 Hz 
         
         self.init_time = rospy.get_time()
    
         while not rospy.is_shutdown():
-            if self.flag == 1:
-                self.goal.position.x = self.data[self.i][0] if (self.i<len(self.data)) else 0
-                self.goal.position.y = self.data[self.i][1] if (self.i<len(self.data)) else 0
-                self.i = self.i + 1 if (self.i<len(self.data)) else self.i
-                self.flag = 0
+            self.goal.position.x = self.data[self.flag][0]
+            self.goal.position.y = self.data[self.flag][1]
+
+            self.cmd_vel_pub.linear.x = 0.2
+            self.cmd_vel_pub.angular.z = 0.0
 
             self.goal_pub.publish(self.goal)
+            self.pub_cmd_vel.publish(self.cmd_vel_pub)
             self.r.sleep()
 
     def flag_cb(self, msg):
