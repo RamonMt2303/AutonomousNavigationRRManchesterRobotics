@@ -9,12 +9,11 @@ import numpy as np
 
 class Bug0():
     def __init__(self):
+        rospy.init_node('bug0') 
         rospy.on_shutdown(self.cleanup)
 
-        rospy.init_node('bug0') 
-
         rospy.Subscriber("puzzlebot_1/scan", LaserScan, self.laser_cb)
-        rospy.Subscriber("set_point", Pose, self.set_point_cb)
+        #rospy.Subscriber("set_point", Pose, self.set_point_cb)
         rospy.Subscriber("puzzlebot_1/base_controller/odom", Odometry, self.odom_cb)
 
         self.pub_cmd_vel = rospy.Publisher("puzzlebot_1/base_controller/cmd_vel", Twist, queue_size = 1)
@@ -55,9 +54,11 @@ class Bug0():
         self.fw = 0.23
 
         self.current_state = 'GTG'
+        self.set_point_cb()
 
         while not rospy.is_shutdown():
              if self.lidar_r and self.goal_r:
+                  print("hola")
                   self.goal_r = 0
                   self.get_closest_range()
                   self.get_theta_ao()
@@ -70,9 +71,10 @@ class Bug0():
                        vel_msg.angular.z = 0
                        self.pub_cmd_vel.publish(vel_msg)
                   elif self.current_state == "GTG":
+                       print(self.closest_range)
                        if self.closest_range <= self.fw:
                             self.get_theta_fw(True)
-
+                            print(abs(self.theta_fw - self.e_theta) <= np.pi/2)
                             if abs(self.theta_fw - self.e_theta) <= np.pi/2:
                                  self.current_state = "CW"
                             else:
@@ -94,21 +96,22 @@ class Bug0():
                        if d_t < abs(d_t - self.min_progress) and abs(self.theta_ao - self.e_theta) > np.pi/2:
                             self.current_state = "GTG"
                             print("GTG")
-                       elif self.at_goal:
+                       elif self.at_goal():
                             self.current_state = "Stop"
 
-                  vel_msg.linear.x = self.v
-                  vel_msg.angular.z = self.w
-                  self.pub_cmd_vel.publish(vel_msg)
+             vel_msg.linear.x = self.v
+             vel_msg.angular.z = self.w
+             self.pub_cmd_vel.publish(vel_msg)
 
 
     def at_goal(self):
         return np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2) < self.tolerance
 
     def get_closest_range(self):
-        new_ranges = np.roll(self.lidar_msg.ranges, int(len(self.lidar_msg.ranges) / 2 + 1))
-        min_idx = np.argmin(new_ranges)
+        #new_ranges = np.roll(self.lidar_msg.ranges, int(len(self.lidar_msg.ranges) / 2 + 1))
+        min_idx = np.argmin(self.lidar_msg.ranges)
         self.closest_range = self.lidar_msg.ranges[min_idx]
+        print(self.closest_range)
         self.closest_angle = self.lidar_msg.angle_min + min_idx * self.lidar_msg.angle_increment
         self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle))
 
@@ -117,8 +120,8 @@ class Bug0():
         self.e_theta = tg - self.tr
 
     def gtg_control(self):
-        kv_m = 1.0
-        kw_m = 0.8
+        kv_m = 0.16
+        kw_m = 0.08
 
         av = 2.0
         aw = 2.0
@@ -133,7 +136,7 @@ class Bug0():
             kw = 0.05
         self.w = kw * e_theta
 
-        if abs(e_theta) > np.pi/8:
+        if abs(e_theta) < np.pi/8:
             self.v = 0
         else:
             kv = kv_m * (1 - np.exp(-av * e_d ** 2))/abs(e_d)
@@ -159,9 +162,22 @@ class Bug0():
         self.lidar_msg = msg
         self.lidar_r = True
 
-    def set_point_cb(self, msg):
-        self.xg = msg.position.x
-        self.yg = msg.position.y
+    def set_point_cb(self):
+        #Map 1
+        self.xg = 1.5
+        self.yg = 1.2
+
+        '''Map 2
+        self.xg = -1.15
+        self.yg = 1.5'''
+
+        '''Map 3
+        self.xg = 0.0
+        self.yg = -2.5'''
+
+        '''Map 4
+        self.xg = 0.0
+        self.yg = -2.5'''
         self.goal_r = True
 
     def odom_cb(self, msg):

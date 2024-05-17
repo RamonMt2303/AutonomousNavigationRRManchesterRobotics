@@ -18,7 +18,7 @@ class path_generator():
 
         ############ CONSTANTS AND VARIABLES ################  
         self.flag = 0
-        self.data = [[1.5, 1.2], [-1.15, 1.5], [0.0, -2.5], [0,-2.5]]
+        self.data = [[1.5, 1.2], [-1.15, 1.5], [0.0, -2.5], [0.0,-2.5]]
         self.i = 0
         self.goal = Pose()
         self.cmd_vel_pub = Twist()
