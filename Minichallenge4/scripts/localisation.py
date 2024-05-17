@@ -21,7 +21,7 @@ class OdomClass():
         rospy.Subscriber("puzzlebot_1/wl", Float32, self.wl_cb) 
         rospy.Subscriber("puzzlebot_1/wr", Float32, self.wr_cb) 
         # Create ROS publishers 
-        self.odom_pub = rospy.Publisher('odom', Odometry ,queue_size=1) #Publisher to odom topic 
+        self.odom_pub = rospy.Publisher('puzzlebot_1/base_controller/odom', Odometry ,queue_size=1) #Publisher to odom topic 
         self.pose_array_pub = rospy.Publisher("pose_array_topic", PoseArray, queue_size=1) #Publisher to pose array topic 
 
         t = TransformStamped() 

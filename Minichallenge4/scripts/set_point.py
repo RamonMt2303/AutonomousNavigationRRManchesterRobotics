@@ -25,17 +25,19 @@ class path_generator():
         self.r = rospy.Rate(50) #20 Hz 
         
         self.init_time = rospy.get_time()
+
+        self.cmd_vel_pub.linear.x = 0.2
+        self.cmd_vel_pub.angular.z = 0.0
+        self.pub_cmd_vel.publish(self.cmd_vel_pub)
+        rospy.sleep(1)
+
    
         while not rospy.is_shutdown():
             self.goal.position.x = self.data[self.flag][0]
             self.goal.position.y = self.data[self.flag][1]
 
-            self.cmd_vel_pub.linear.x = 0.2
-            self.cmd_vel_pub.angular.z = 0.0
-
             self.goal_pub.publish(self.goal)
-            self.pub_cmd_vel.publish(self.cmd_vel_pub)
-            self.r.sleep()
+            rospy.sleep(1)
 
     def flag_cb(self, msg):
         self.flag = msg.data
