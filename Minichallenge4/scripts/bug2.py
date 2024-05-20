@@ -7,7 +7,7 @@ from tf.transformations import euler_from_quaternion
 from sensor_msgs.msg import LaserScan
 import numpy as np
 
-class Bug0():
+class Bug2():
     def __init__(self):
         rospy.init_node('bug0') 
         rospy.on_shutdown(self.cleanup)
@@ -45,13 +45,18 @@ class Bug0():
 
         self.hp = 0.0
         self.lp = 0.0
-        self.tolerance = 0.05
+        self.tolerance = 0.08
         self.min_progress = -0.000001
 
         self.v = 0.0
         self.w = 0.0
 
         self.fw = 0.33
+
+        # Additional variables for Bug2 algorithm
+        self.lp = 0.0  # Last hit point along the wall
+        self.leave_point = False  # Flag to indicate if leave point is reached
+
 
         self.current_state = 'GTG'
         self.set_point_cb()
@@ -64,39 +69,44 @@ class Bug0():
                   #self.get_theta_gtg()
                   #self.get_theta_fw(True)
                   d_t = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
+                  if self.closest_range < self.fw:  # If obstacle detected
+                    if not self.leave_point:  # If not at leave point yet
+                        self.lp = self.closest_angle  # Update last hit point
+                        self.fw_control(True)  # Follow the wall (clockwise)
+                    else:
+                        # Check if past the leave point (opposite side of goal)
+                        if np.sign(self.lp - self.closest_angle) != np.sign(self.closest_angle - self.theta_ao):
+                            self.current_state = "GTG"
+                            self.leave_point = False
+                        else:
+                            self.fw_control(True)  # Continue following the wall
 
-                  if self.at_goal():
-                       print("Done")
-                       self.v = 0.0
-                       self.w = 0.0
-                  elif self.current_state == "GTG":
-                       print(self.current_state)
-                       if self.closest_range < self.fw:
-                            if abs(self.closest_angle - self.e_theta) <= np.pi/2:
-                                 self.current_state = "CW"
-                            elif abs(self.closest_angle - self.e_theta) > np.pi/2:
-                                 self.current_state = "CCW"
-                       else:
+                  else:  # If no obstacle detected
+                        d_t = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
+                        if self.at_goal():
+                            print("Done")
+                            self.v = 0.0
+                            self.w = 0.0
+                        elif self.current_state == "GTG":
                             self.gtg_control()
-                  elif self.current_state == "CW":
-                       print(self.current_state)
-                       self.fw_control(True)
-                       if self.made_progress(d_t) and abs(self.theta_fw - self.e_theta) < np.pi/2:
-                            self.current_state = "GTG"
-                       elif self.at_goal():
-                            self.current_state = "Stop"
-                       else:
-                            self.fw_control(True)
-                  elif self.current_state == "CCW":
-                       print(self.current_state)
-                       self.fw_control(False)
-                       if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
-                            self.current_state = "GTG"
-                       elif self.at_goal():
-                            self.current_state = "Stop"
-                       else:
-                            self.fw_control(False)
+                        elif self.current_state == "CW":
+                            if self.made_progress(d_t) and abs(self.theta_fw - self.e_theta) < np.pi/2:
+                                self.current_state = "GTG"
+                                self.leave_point = True  # Set leave point flag
+                            elif self.at_goal():
+                                self.current_state = "Stop"
+                            else:
+                                self.fw_control(True)
+                        elif self.current_state == "CCW":
+                            if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
+                                self.current_state = "GTG"
+                                self.leave_point = True  # Set leave point flag
+                            elif self.at_goal():
+                                self.current_state = "Stop"
+                            else:
+                                self.fw_control(False)
 
+             vel_msg = Twist()
              vel_msg.linear.x = self.v
              vel_msg.angular.z = self.w
              self.pub_cmd_vel.publish(vel_msg)
@@ -155,10 +165,11 @@ class Bug0():
         self.w = kw * e_theta
 
         if abs(e_theta) < np.pi/8:
-            self.v = 0
+            self.v = kv_m * e_d  # Avanzar con una velocidad proporcional a la distancia al objetivo
         else:
             kv = kv_m * (1 - np.exp(-av * e_d ** 2))/abs(e_d)
             self.v = kv * e_d
+
 
     def fw_control(self, clockwise):
         theta_ao = self.closest_angle + np.pi/2
@@ -182,13 +193,13 @@ class Bug0():
         self.xg = 1.5
         self.yg = 1.2'''
 
-        #Map 1
+        '''#Map 1
         self.xg = 2.3
-        self.yg = 2.0
+        self.yg = 2.0'''
 
-        '''Map 2
+        #Map 2
         self.xg = -1.15
-        self.yg = 1.5'''
+        self.yg = 1.5
 
         '''Map 3
         self.xg = 0.0
@@ -227,4 +238,4 @@ class Bug0():
 
 ############################### MAIN PROGRAM ####################################  
 if __name__ == "__main__":  
-    Bug0()  
+    Bug2()  

@@ -1,59 +1,42 @@
 #!/usr/bin/env python3
 import rospy
+from geometry_msgs.msg import Pose, Point
+from nav_msgs.msg import Odometry
+from std_msgs.msg import String
 import numpy as np
 
-from std_msgs.msg import Float32
-from geometry_msgs.msg import Twist  
-from geometry_msgs.msg import Pose
+class GoalChecker:
+    def __init__(self):
+        rospy.init_node('goal_checker')
 
-#This class will subscribe to the /message topic and publish to the /cmd_vel topic 
+        self.xg = 0.0
+        self.yg = 0.0
+        self.xr = 0.0
+        self.yr = 0.0
+        self.tolerance = 0.05
 
-class path_generator():  
-    def __init__(self):  
-        rospy.on_shutdown(self.cleanup) #This function will be called before killing the node. 
-        #########PUBLISHERS AND SUBSCRIBERS ################# 
-        self.goal_pub = rospy.Publisher('set_point', Pose, queue_size=1)  
-        self.pub_cmd_vel = rospy.Publisher('puzzlebot_1/base_controller/cmd_vel', Twist, queue_size=1)  
-        rospy.Subscriber("flag", Float32, self.flag_cb) 
+        rospy.Subscriber("set_point", Pose, self.set_point_cb)
+        rospy.Subscriber("puzzlebot_1/base_controller/odom", Odometry, self.odom_cb)
+        self.pub_goal_status = rospy.Publisher("goal_status", String, queue_size=1)
 
-        ############ CONSTANTS AND VARIABLES ################  
-        self.flag = 0
-        self.data = [[1.5, 1.2], [-1.15, 1.5], [0.0, -2.5], [0.0,-2.5]]
-        self.i = 0
-        self.goal = Pose()
-        self.cmd_vel_pub = Twist()
-        self.r = rospy.Rate(50) #20 Hz 
-        
-        self.init_time = rospy.get_time()
+        rospy.spin()
 
-        self.cmd_vel_pub.linear.x = 0.2
-        self.cmd_vel_pub.angular.z = 0.0
-        self.pub_cmd_vel.publish(self.cmd_vel_pub)
-        rospy.sleep(1)
+    def set_point_cb(self, msg):
+        self.xg = msg.position.x
+        self.yg = msg.position.y
 
-   
-        while not rospy.is_shutdown():
-            self.goal.position.x = self.data[self.flag][0]
-            self.goal.position.y = self.data[self.flag][1]
+    def odom_cb(self, msg):
+        self.xr = msg.pose.pose.position.x
+        self.yr = msg.pose.pose.position.y
+        self.check_goal()
 
-            self.goal_pub.publish(self.goal)
-            rospy.sleep(1)
+    def check_goal(self):
+        distance = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
+        if distance < self.tolerance:
+            self.pub_goal_status.publish("Objetivo alcanzado")
 
-    def flag_cb(self, msg):
-        self.flag = msg.data
-     
-    def cleanup(self):  
-        #This function is called just before finishing the node  
-        # You can use it to clean things up before leaving  
-        # Example: stop the robot before finishing a node.
-        zero = Pose()    
-        self.goal_pub.publish(zero) #publish the message 
-        print("I'm dying, bye bye!!!")  
-
-############################### MAIN PROGRAM ####################################  
-
-if __name__ == "__main__":  
-    rospy.init_node("Set_point_generator", anonymous=True)  
-    path_generator() 
-
-
+if __name__ == "__main__":
+    try:
+        GoalChecker()
+    except rospy.ROSInterruptException:
+        pass

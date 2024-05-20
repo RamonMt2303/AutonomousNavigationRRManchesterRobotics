@@ -12,8 +12,8 @@ class GoToGoal():
         rospy.on_shutdown(self.cleanup)
         ############ Variables ###############
         targets = [[0.51,2.08],[2.39,4.77],[1.79,3.57],[1.53,1.30],[1.42,0.21]] 
-        self.x_target=0.0
-        self.y_target=0.0
+        self.x_target=1.42
+        self.y_target=0.21
         #self.x_target=1.42 #x position of the goal
         #self.y_target=0.21 #y position of the goal
         self.x = 0.0
