@@ -80,28 +80,21 @@ class Bug0():
                             self.gtg_control()
                   elif self.current_state == "CW":
                        print(self.current_state)
-                       #self.get_theta_fw(True)
                        self.fw_control(True)
-                       #print(self.made_progress(d_t))
-                       print(self.made_progress(d_t))
-                       print(abs(self.theta_fw - self.e_theta) < np.pi/2)
                        if self.made_progress(d_t) and abs(self.theta_fw - self.e_theta) < np.pi/2:
                             self.current_state = "GTG"
                        elif self.at_goal():
                             self.current_state = "Stop"
                        else:
-                            #self.get_theta_fw(True)
                             self.fw_control(True)
                   elif self.current_state == "CCW":
                        print(self.current_state)
-                       #self.get_theta_fw(False)
                        self.fw_control(False)
                        if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
                             self.current_state = "GTG"
                        elif self.at_goal():
                             self.current_state = "Stop"
                        else:
-                            #self.get_theta_fw(False)
                             self.fw_control(False)
 
              vel_msg.linear.x = self.v
@@ -111,7 +104,8 @@ class Bug0():
 
 
     def at_goal(self):
-        return np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2) < self.tolerance
+        print(abs(self.xr - self.xg), abs(self.yr - self.yg))
+        return (abs(self.xr - self.xg) < 0.05) and (abs(self.yr - self.yg) < 0.05)
     
     def made_progress(self, current_distance):
         progress = self.previous_distance_to_goal - current_distance
@@ -166,17 +160,6 @@ class Bug0():
             kv = kv_m * (1 - np.exp(-av * e_d ** 2))/abs(e_d)
             self.v = kv * e_d
 
-    def ao_control(self):
-        theta_ao = self.closest_angle + np.pi/2
-        self.theta_ao = np.arctan2(np.sin(theta_ao), np.cos(theta_ao))
-
-    def get_theta_fw(self, clockwise):
-        if clockwise:
-            theta_fw = -np.pi / 2 + self.theta_ao
-        else:
-            theta_fw = np.pi / 2 + self.theta_ao
-        self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
-
     def fw_control(self, clockwise):
         theta_ao = self.closest_angle + np.pi/2
         self.theta_ao = np.arctan2(np.sin(theta_ao), np.cos(theta_ao))
@@ -186,7 +169,7 @@ class Bug0():
             theta_fw = np.pi / 2 + self.theta_ao
         self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
 
-        kw = 0.7
+        kw = 1.0
         self.v = 0.08
         self.w = kw * self.theta_fw
 
@@ -199,9 +182,9 @@ class Bug0():
         self.xg = 1.5
         self.yg = 1.2'''
 
-        '''#Map 1
+        #Map 1
         self.xg = 2.3
-        self.yg = 2.0'''
+        self.yg = 2.0
 
         '''Map 2
         self.xg = -1.15
