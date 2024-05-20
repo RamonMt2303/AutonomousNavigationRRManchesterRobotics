@@ -46,78 +46,104 @@ class Bug0():
         self.hp = 0.0
         self.lp = 0.0
         self.tolerance = 0.05
-        self.min_progress = 0.15
+        self.min_progress = -0.000001
 
         self.v = 0.0
         self.w = 0.0
 
-        self.fw = 0.23
+        self.fw = 0.33
 
         self.current_state = 'GTG'
         self.set_point_cb()
+        self.previous_distance_to_goal = np.inf
 
         while not rospy.is_shutdown():
              if self.lidar_r and self.goal_r:
-                  print("hola")
-                  self.goal_r = 0
                   self.get_closest_range()
-                  self.get_theta_ao()
-                  self.get_theta_gtg()
+                  #self.get_theta_ao()
+                  #self.get_theta_gtg()
+                  #self.get_theta_fw(True)
                   d_t = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
 
                   if self.at_goal():
                        print("Done")
-                       vel_msg.linear.x = 0
-                       vel_msg.angular.z = 0
-                       self.pub_cmd_vel.publish(vel_msg)
+                       self.v = 0.0
+                       self.w = 0.0
                   elif self.current_state == "GTG":
-                       print(self.closest_range)
-                       if self.closest_range <= self.fw:
-                            self.get_theta_fw(True)
-                            print(abs(self.theta_fw - self.e_theta) <= np.pi/2)
-                            if abs(self.theta_fw - self.e_theta) <= np.pi/2:
+                       print(self.current_state)
+                       if self.closest_range < self.fw:
+                            if abs(self.closest_angle - self.e_theta) <= np.pi/2:
                                  self.current_state = "CW"
-                            else:
+                            elif abs(self.closest_angle - self.e_theta) > np.pi/2:
                                  self.current_state = "CCW"
                        else:
-                            print("GTG")
                             self.gtg_control()
-                            vel_msg.linear.x = self.v
-                            vel_msg.angular.z = self.w
                   elif self.current_state == "CW":
-                       self.fw_control()
-                       if d_t < abs(d_t - self.min_progress) and abs(self.theta_ao - self.e_theta) <= np.pi/2:
+                       print(self.current_state)
+                       #self.get_theta_fw(True)
+                       self.fw_control(True)
+                       #print(self.made_progress(d_t))
+                       print(self.made_progress(d_t))
+                       print(abs(self.theta_fw - self.e_theta) < np.pi/2)
+                       if self.made_progress(d_t) and abs(self.theta_fw - self.e_theta) < np.pi/2:
                             self.current_state = "GTG"
-                            print("GTG")
-                       elif self.at_goal:
-                            self.current_state = "Stop"
-                  elif self.current_state == "CCW":
-                       self.fw_control()
-                       if d_t < abs(d_t - self.min_progress) and abs(self.theta_ao - self.e_theta) > np.pi/2:
-                            self.current_state = "GTG"
-                            print("GTG")
                        elif self.at_goal():
                             self.current_state = "Stop"
+                       else:
+                            #self.get_theta_fw(True)
+                            self.fw_control(True)
+                  elif self.current_state == "CCW":
+                       print(self.current_state)
+                       #self.get_theta_fw(False)
+                       self.fw_control(False)
+                       if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
+                            self.current_state = "GTG"
+                       elif self.at_goal():
+                            self.current_state = "Stop"
+                       else:
+                            #self.get_theta_fw(False)
+                            self.fw_control(False)
 
              vel_msg.linear.x = self.v
              vel_msg.angular.z = self.w
              self.pub_cmd_vel.publish(vel_msg)
+             rate.sleep()
 
 
     def at_goal(self):
         return np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2) < self.tolerance
+    
+    def made_progress(self, current_distance):
+        progress = self.previous_distance_to_goal - current_distance
+        self.previous_distance_to_goal = current_distance
+        return abs(progress) > 0.01
 
     def get_closest_range(self):
-        #new_ranges = np.roll(self.lidar_msg.ranges, int(len(self.lidar_msg.ranges) / 2 + 1))
-        min_idx = np.argmin(self.lidar_msg.ranges)
-        self.closest_range = self.lidar_msg.ranges[min_idx]
-        print(self.closest_range)
-        self.closest_angle = self.lidar_msg.angle_min + min_idx * self.lidar_msg.angle_increment
-        self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle))
+        '''# Create a copy of the ranges to avoid modifying the original data
+        limited_ranges = np.array(self.lidar_msg.ranges)
 
-    def get_theta_gtg(self):
+        # Filter out ranges that exceed the max_range
+        limited_ranges[limited_ranges > 4] = np.inf  # Use np.inf to ignore these values
+
+        # Find the closest range within the limited ranges
+        min_idx = np.argmin(limited_ranges)
+        self.closest_range = limited_ranges[min_idx]
+        self.closest_angle = self.lidar_msg.angle_min + min_idx * self.lidar_msg.angle_increment
+        self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle))'''
+
+        new_angle_min = -np.pi/2.0
+        ranges_size = len(self.lidar_msg.ranges)
+        cropped_ranges = self.lidar_msg.ranges[int((ranges_size)/4):3*int((ranges_size)/4)]
+        cropped_ranges = np.roll(cropped_ranges, int(len(cropped_ranges)/2 + 1))
+        min_idx = np.argmin(cropped_ranges)
+        self.closest_range = cropped_ranges[min_idx]
+        closest_angle = new_angle_min + min_idx * self.lidar_msg.angle_increment
+        # limit the angle to [-pi, pi]
+        self.closest_angle = np.arctan2(np.sin(closest_angle), np.cos(closest_angle))
+
+    '''def get_theta_gtg(self):
         tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
-        self.e_theta = tg - self.tr
+        self.e_theta = tg - self.tr'''
 
     def gtg_control(self):
         kv_m = 0.16
@@ -129,11 +155,9 @@ class Bug0():
         e_d = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
         tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
         e_theta = tg - self.tr
+        e_theta = np.arctan2(np.sin(e_theta), np.cos(e_theta))
 
-        if e_theta != 0:
-            kw = kw_m * (1 - np.exp(-aw * e_theta ** 2)) / abs(e_theta)
-        else:
-            kw = 0.05
+        kw = kw_m * (1 - np.exp(-aw * e_theta ** 2)) / abs(e_theta)        
         self.w = kw * e_theta
 
         if abs(e_theta) < np.pi/8:
@@ -142,8 +166,8 @@ class Bug0():
             kv = kv_m * (1 - np.exp(-av * e_d ** 2))/abs(e_d)
             self.v = kv * e_d
 
-    def get_theta_ao(self):
-        theta_ao = self.closest_angle - np.pi
+    def ao_control(self):
+        theta_ao = self.closest_angle + np.pi/2
         self.theta_ao = np.arctan2(np.sin(theta_ao), np.cos(theta_ao))
 
     def get_theta_fw(self, clockwise):
@@ -153,8 +177,16 @@ class Bug0():
             theta_fw = np.pi / 2 + self.theta_ao
         self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
 
-    def fw_control(self):
-        kw = 1.5
+    def fw_control(self, clockwise):
+        theta_ao = self.closest_angle + np.pi/2
+        self.theta_ao = np.arctan2(np.sin(theta_ao), np.cos(theta_ao))
+        if clockwise:
+            theta_fw = -np.pi / 2 + self.theta_ao
+        else:
+            theta_fw = np.pi / 2 + self.theta_ao
+        self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
+
+        kw = 0.7
         self.v = 0.08
         self.w = kw * self.theta_fw
 
@@ -163,9 +195,13 @@ class Bug0():
         self.lidar_r = True
 
     def set_point_cb(self):
-        #Map 1
+        '''#Map 1
         self.xg = 1.5
-        self.yg = 1.2
+        self.yg = 1.2'''
+
+        '''#Map 1
+        self.xg = 2.3
+        self.yg = 2.0'''
 
         '''Map 2
         self.xg = -1.15
