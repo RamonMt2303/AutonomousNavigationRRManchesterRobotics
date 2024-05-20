@@ -45,8 +45,8 @@ class Bug0():
 
         self.hp = 0.0
         self.lp = 0.0
-        self.tolerance = 0.05
-        self.min_progress = -0.000001
+        self.tolerance = 0.1
+        self.min_progress = 0.0
 
         self.v = 0.0
         self.w = 0.0
@@ -72,16 +72,16 @@ class Bug0():
                   elif self.current_state == "GTG":
                        print(self.current_state)
                        if self.closest_range < self.fw:
-                            if abs(self.closest_angle - self.e_theta) <= np.pi/2:
+                            if abs(self.closest_angle - self.e_theta) > np.pi/2:
                                  self.current_state = "CW"
-                            elif abs(self.closest_angle - self.e_theta) > np.pi/2:
+                            elif abs(self.closest_angle - self.e_theta) <= np.pi/2:
                                  self.current_state = "CCW"
                        else:
                             self.gtg_control()
                   elif self.current_state == "CW":
                        print(self.current_state)
                        self.fw_control(True)
-                       if self.made_progress(d_t) and abs(self.theta_fw - self.e_theta) < np.pi/2:
+                       if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
                             self.current_state = "GTG"
                        elif self.at_goal():
                             self.current_state = "Stop"
@@ -104,13 +104,14 @@ class Bug0():
 
 
     def at_goal(self):
-        print(abs(self.xr - self.xg), abs(self.yr - self.yg))
+        #print(abs(self.xr - self.xg), abs(self.yr - self.yg))
         return (abs(self.xr - self.xg) < 0.05) and (abs(self.yr - self.yg) < 0.05)
     
     def made_progress(self, current_distance):
         progress = self.previous_distance_to_goal - current_distance
         self.previous_distance_to_goal = current_distance
-        return abs(progress) > 0.01
+        #print(abs(progress) > 0.001)
+        return abs(progress) > 0.001
 
     def get_closest_range(self):
         '''# Create a copy of the ranges to avoid modifying the original data
@@ -135,38 +136,36 @@ class Bug0():
         # limit the angle to [-pi, pi]
         self.closest_angle = np.arctan2(np.sin(closest_angle), np.cos(closest_angle))
 
-    '''def get_theta_gtg(self):
-        tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
-        self.e_theta = tg - self.tr'''
-
     def gtg_control(self):
         kv_m = 0.16
-        kw_m = 0.08
+        kw_m = 0.3
 
         av = 2.0
         aw = 2.0
 
         e_d = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
         tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
+        print("TG: ", tg)
         e_theta = tg - self.tr
+        print("theta r: ", self.tr)
         e_theta = np.arctan2(np.sin(e_theta), np.cos(e_theta))
+        print("e theta: ", e_theta)
 
         kw = kw_m * (1 - np.exp(-aw * e_theta ** 2)) / abs(e_theta)        
         self.w = kw * e_theta
+        print("W: ", self.w)
 
-        if abs(e_theta) < np.pi/8:
-            self.v = 0
-        else:
-            kv = kv_m * (1 - np.exp(-av * e_d ** 2))/abs(e_d)
-            self.v = kv * e_d
+        kv = kv_m * (1 - np.exp(-av * e_d ** 2))/abs(e_d)
+        self.v = kv * e_d
+        print("V: ", self.v)
 
     def fw_control(self, clockwise):
         theta_ao = self.closest_angle + np.pi/2
         self.theta_ao = np.arctan2(np.sin(theta_ao), np.cos(theta_ao))
         if clockwise:
-            theta_fw = -np.pi / 2 + self.theta_ao
-        else:
             theta_fw = np.pi / 2 + self.theta_ao
+        else:
+            theta_fw = -np.pi / 2 + self.theta_ao
         self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
 
         kw = 1.0
@@ -182,17 +181,21 @@ class Bug0():
         self.xg = 1.5
         self.yg = 1.2'''
 
-        #Map 1
+        '''#Map 1
         self.xg = 2.3
-        self.yg = 2.0
+        self.yg = 2.0'''
 
-        '''Map 2
+        '''#Map 2
         self.xg = -1.15
         self.yg = 1.5'''
 
-        '''Map 3
-        self.xg = 0.0
-        self.yg = -2.5'''
+        '''#Map 2
+        self.xg = 0.35
+        self.yg = 2.4'''
+
+        #Map 3
+        self.xg = 4.5
+        self.yg = -0.5
 
         '''Map 4
         self.xg = 0.0
