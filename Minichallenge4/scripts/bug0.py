@@ -105,13 +105,13 @@ class Bug0():
 
     def at_goal(self):
         #print(abs(self.xr - self.xg), abs(self.yr - self.yg))
-        return (abs(self.xr - self.xg) < 0.05) and (abs(self.yr - self.yg) < 0.05)
+        return (abs(self.xr - self.xg) < self.tolerance) and (abs(self.yr - self.yg) < self.tolerance)
     
     def made_progress(self, current_distance):
         progress = self.previous_distance_to_goal - current_distance
         self.previous_distance_to_goal = current_distance
         #print(abs(progress) > 0.001)
-        return abs(progress) > 0.001
+        return progress > 0.001
 
     def get_closest_range(self):
         '''# Create a copy of the ranges to avoid modifying the original data
@@ -137,19 +137,19 @@ class Bug0():
         self.closest_angle = np.arctan2(np.sin(closest_angle), np.cos(closest_angle))
 
     def gtg_control(self):
-        kv_m = 0.16
-        kw_m = 0.3
+        kv_m = 0.46
+        kw_m = 0.8
 
         av = 2.0
         aw = 2.0
 
         e_d = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
         tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
-        print("TG: ", tg)
+        #print("TG: ", tg)
         e_theta = tg - self.tr
-        print("theta r: ", self.tr)
+        #print("theta r: ", self.tr)
         e_theta = np.arctan2(np.sin(e_theta), np.cos(e_theta))
-        print("e theta: ", e_theta)
+        #print("e theta: ", e_theta)
 
         kw = kw_m * (1 - np.exp(-aw * e_theta ** 2)) / abs(e_theta)        
         self.w = kw * e_theta
@@ -168,7 +168,7 @@ class Bug0():
             theta_fw = -np.pi / 2 + self.theta_ao
         self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
 
-        kw = 1.0
+        kw = 1.4
         self.v = 0.08
         self.w = kw * self.theta_fw
 
@@ -193,13 +193,13 @@ class Bug0():
         self.xg = 0.35
         self.yg = 2.4'''
 
-        #Map 3
-        self.xg = 4.5
-        self.yg = -0.5
+        '''#Map 3
+        self.xg = 4.2
+        self.yg = -2.0'''
 
-        '''Map 4
+        #Map 4
         self.xg = 0.0
-        self.yg = -2.5'''
+        self.yg = -2.5
         self.goal_r = True
 
     def odom_cb(self, msg):
