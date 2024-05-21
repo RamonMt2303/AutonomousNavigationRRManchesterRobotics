@@ -193,8 +193,8 @@ class Bug0():
         self.yg = 1.5'''
 
         #Map 2
-        self.xg = 0.35
-        self.yg = 2.4
+        self.xg = 0.7
+        self.yg = 2.5
 
         #Map 3
         '''self.xg = 4.5

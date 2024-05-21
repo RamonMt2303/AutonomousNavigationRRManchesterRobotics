@@ -7,14 +7,14 @@
         <arg name="robot_description_file" default="puzzlebot_jetson_lidar_ed_v1.xacro"/>
 
         <!-- Posicion del puzzlebot mapa 1-->
-        <arg name="pos_x" default="-1"/>
+        <!--<arg name="pos_x" default="-1"/>
         <arg name="pos_y" default="-1.2"/>
-        <arg name="pos_theta" default="0"/>
+        <arg name="pos_theta" default="0"/>-->
         
         <!-- Posicion del puzzlebot mapa 2 -->
-        <!--<arg name="pos_x" default="-2.0"/>
+        <arg name="pos_x" default="-2.0"/>
         <arg name="pos_y" default="-1.5"/>
-        <arg name="pos_theta" default="0"/>-->
+        <arg name="pos_theta" default="0"/>
 
         <!-- Posicion del puzzlebot mapa 3 -->
         <!--<arg name="pos_x" default="2.0"/>
@@ -27,7 +27,7 @@
         <arg name="pos_theta" default="-1.57"/>-->
 
         <!-- Gazebo Parameters -->
-        <arg name="world_name" default="$(find puzzlebot_gazebo)/worlds/obstacle_avoidance_1.world"/>
+        <arg name="world_name" default="$(find puzzlebot_gazebo)/worlds/obstacle_avoidance_2.world"/>
         <!-- <arg name="world_name" default="$(find puzzlebot_gazebo)/worlds/puzzlebot_arena_markers.world"/>-->
         <arg name="paused" default="false"/>
         <arg name="use_sim_time" default="true"/>
