@@ -45,8 +45,8 @@ class Bug0():
 
         self.hp = 0.0
         self.lp = 0.0
-        self.tolerance = 0.1
-        self.min_progress = 0.0
+        self.tolerance = 0.05
+        self.min_progress = 0.3
 
         self.v = 0.0
         self.w = 0.0
@@ -72,16 +72,18 @@ class Bug0():
                   elif self.current_state == "GTG":
                        print(self.current_state)
                        if self.closest_range < self.fw:
-                            if abs(self.closest_angle - self.e_theta) > np.pi/2:
+                            self.hit = self.made_progress()
+                            if abs(self.closest_angle - self.e_theta) <= np.pi/2:
                                  self.current_state = "CW"
-                            elif abs(self.closest_angle - self.e_theta) <= np.pi/2:
+                            elif abs(self.closest_angle - self.e_theta) > np.pi/2:
                                  self.current_state = "CCW"
                        else:
                             self.gtg_control()
                   elif self.current_state == "CW":
                        print(self.current_state)
                        self.fw_control(True)
-                       if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
+                       print(self.made_progress() < abs(self.hit - self.min_progress))
+                       if self.made_progress() < abs(self.hit - self.min_progress) and abs(self.theta_ao - self.e_theta) < np.pi/2:
                             self.current_state = "GTG"
                        elif self.at_goal():
                             self.current_state = "Stop"
@@ -90,7 +92,10 @@ class Bug0():
                   elif self.current_state == "CCW":
                        print(self.current_state)
                        self.fw_control(False)
-                       if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
+                       #print("Made progress", self.made_progress())
+                       #print("Hit point", self.hit)
+                       print(self.made_progress() < abs(self.hit - self.min_progress))
+                       if self.made_progress() < abs(self.hit - self.min_progress) and abs(self.theta_ao - self.e_theta) < np.pi/2:
                             self.current_state = "GTG"
                        elif self.at_goal():
                             self.current_state = "Stop"
@@ -107,11 +112,8 @@ class Bug0():
         #print(abs(self.xr - self.xg), abs(self.yr - self.yg))
         return (abs(self.xr - self.xg) < self.tolerance) and (abs(self.yr - self.yg) < self.tolerance)
     
-    def made_progress(self, current_distance):
-        progress = self.previous_distance_to_goal - current_distance
-        self.previous_distance_to_goal = current_distance
-        #print(abs(progress) > 0.001)
-        return progress > 0.001
+    def made_progress(self):
+        return np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
 
     def get_closest_range(self):
         '''# Create a copy of the ranges to avoid modifying the original data
@@ -126,30 +128,30 @@ class Bug0():
         self.closest_angle = self.lidar_msg.angle_min + min_idx * self.lidar_msg.angle_increment
         self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle))'''
 
-        new_angle_min = -np.pi/2.0
-        ranges_size = len(self.lidar_msg.ranges)
-        cropped_ranges = self.lidar_msg.ranges[int((ranges_size)/4):3*int((ranges_size)/4)]
-        cropped_ranges = np.roll(cropped_ranges, int(len(cropped_ranges)/2 + 1))
-        min_idx = np.argmin(cropped_ranges)
-        self.closest_range = cropped_ranges[min_idx]
+        new_angle_min = self.lidar_msg.angle_min
+        #ranges_size = len(self.lidar_msg.ranges)
+        #cropped_ranges = self.lidar_msg.ranges[int((ranges_size)/4):3*int((ranges_size)/4)]
+        #cropped_ranges = np.roll(cropped_ranges, int(len(cropped_ranges)/2 + 1))
+        min_idx = np.argmin(self.lidar_msg.ranges)
+        self.closest_range = self.lidar_msg.ranges[min_idx]
         closest_angle = new_angle_min + min_idx * self.lidar_msg.angle_increment
         # limit the angle to [-pi, pi]
         self.closest_angle = np.arctan2(np.sin(closest_angle), np.cos(closest_angle))
 
     def gtg_control(self):
-        kv_m = 0.46
-        kw_m = 0.8
+        kv_m = 0.5
+        kw_m = 3.0
 
         av = 2.0
         aw = 2.0
 
         e_d = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
         tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
-        #print("TG: ", tg)
+        print("TG: ", tg)
         e_theta = tg - self.tr
-        #print("theta r: ", self.tr)
+        print("theta r: ", self.tr)
         e_theta = np.arctan2(np.sin(e_theta), np.cos(e_theta))
-        #print("e theta: ", e_theta)
+        print("e theta: ", e_theta)
 
         kw = kw_m * (1 - np.exp(-aw * e_theta ** 2)) / abs(e_theta)        
         self.w = kw * e_theta
@@ -160,7 +162,8 @@ class Bug0():
         print("V: ", self.v)
 
     def fw_control(self, clockwise):
-        theta_ao = self.closest_angle + np.pi/2
+        self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle))
+        theta_ao = self.closest_angle - np.pi
         self.theta_ao = np.arctan2(np.sin(theta_ao), np.cos(theta_ao))
         if clockwise:
             theta_fw = np.pi / 2 + self.theta_ao
@@ -168,7 +171,7 @@ class Bug0():
             theta_fw = -np.pi / 2 + self.theta_ao
         self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
 
-        kw = 1.4
+        kw = 2.8
         self.v = 0.08
         self.w = kw * self.theta_fw
 
@@ -181,25 +184,25 @@ class Bug0():
         self.xg = 1.5
         self.yg = 1.2'''
 
-        '''#Map 1
-        self.xg = 2.3
+        #Map 1
+        '''self.xg = 2.3
         self.yg = 2.0'''
 
         '''#Map 2
         self.xg = -1.15
         self.yg = 1.5'''
 
-        '''#Map 2
+        #Map 2
         self.xg = 0.35
-        self.yg = 2.4'''
+        self.yg = 2.4
 
-        '''#Map 3
-        self.xg = 4.2
-        self.yg = -2.0'''
+        #Map 3
+        '''self.xg = 4.5
+        self.yg = -0.5'''
 
-        #Map 4
+        '''Map 4
         self.xg = 0.0
-        self.yg = -2.5
+        self.yg = -2.5'''
         self.goal_r = True
 
     def odom_cb(self, msg):
