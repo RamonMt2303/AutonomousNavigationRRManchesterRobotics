@@ -1,230 +1,333 @@
-#!/usr/bin/env python3
-import rospy 
-from geometry_msgs.msg import Twist, Pose
+#!/usr/bin/env python3  
+
+import rospy  
+from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Float32
-from tf.transformations import euler_from_quaternion 
-from sensor_msgs.msg import LaserScan
-import numpy as np
+from std_msgs.msg import Float32 
+from sensor_msgs.msg import LaserScan   #Lidar
+from tf.transformations import euler_from_quaternion
+import numpy as np 
 
-class Bug0():
-    def __init__(self):
-        rospy.init_node('bug0') 
-        rospy.on_shutdown(self.cleanup)
+#This class will make the puzzlebot move to a given goal 
+class AutonomousNav():  
+	def __init__(self):  
+		rospy.on_shutdown(self.cleanup)
+		############ ROBOT CONSTANTS ###############
+		self.r = 0.05 #wheel radius [m]
+		self.L = 0.19 #wheel separation [m] 
+		############ VARIABLES ############### 
+		self.dGTG_h = 0
+		self.closest_angle = 0
+		self.closest_range = 0
+		self.theta_r = 0
+		self.x_r = 0
+		self.y_r = 0
 
-        rospy.Subscriber("puzzlebot_1/scan", LaserScan, self.laser_cb)
-        #rospy.Subscriber("set_point", Pose, self.set_point_cb)
-        rospy.Subscriber("puzzlebot_1/base_controller/odom", Odometry, self.odom_cb)
+		'''#Mapa 1
+		self.x_target= 1.5 #x position of the goal 
+		self.y_target= 1.2 #y position of the goal'''
 
-        self.pub_cmd_vel = rospy.Publisher("puzzlebot_1/base_controller/cmd_vel", Twist, queue_size = 1)
+		'''#Mapa 2
+		self.x_target= -1.3 #x position of the goal 
+		self.y_target= 1.5 #y position of the goal '''
 
-        rate = rospy.Rate(50)
-        dt = 1.0 / 10
+		#Mapa 3 y Mapa 4
+		self.x_target= 0.0 #x position of the goal 
+		self.y_target= -2.3 #y position of the goal
 
-        self.xg = 0.0
-        self.yg = 0.0
+		self.goal_received = 1 #flag to indicate if the goal has been received 
+		self.lidar_received = 0 #flag to indicate if the laser scan has been received 
+		#Mapa 3 0.29
+		self.target_position_tolerance=0.10 #acceptable distance to the goal to declare the robot has arrived to it [m] 
+		#Mapa 1-2
+		#d_fw = 0.25 # distance from closest obstacle to activate the avoid obstacle behavior [m] # dFw 
+		
+		#Mapa 3
+		#d_fw = 0.55
 
-        self.e_theta = 0.0
-        self.theta_ao = 0.0
-        self.theta_fw = 0.0
-        
-        self.xr = 0.0
-        self.yr = 0.0
-        self.tr = 0.0
+		#Mapa 4
+		d_fw = 0.45
+		v_msg=Twist() #Robot's desired speed  
+		self.wr = 0 #right wheel speed [rad/s]
+		self.wl = 0 #left wheel speed [rad/s]
+		self.current_state = 'GoToGoal' #Robot's current state 
 
-        self.goal_r = False
-        self.lidar_r = False
+		# inicializamos y definimos ganancias para goal to goal 
+		'''#Mapa 3
+		self.k_v = 0.1
+		self.k_w = 0.9'''
 
-        vel_msg = Twist()
+		#Mapa 4
+		self.k_v = 0.1
+		self.k_w = 1.0
+		
+		#definimos minimo progreso requerido para ir a goal to goal
+		#Mapa 1-2
+		#self.minprogress = 2.8
+		
+		#Mapa 3 y 4
+		self.minprogress = 0.2
+		
 
-        self.wr = 0.0
-        self.wl = 0.0
+		###******* INIT PUBLISHERS *******###
+		self.pub_cmd_vel = rospy.Publisher('puzzlebot_1/base_controller/cmd_vel', Twist, queue_size=1)  
+		############################### SUBSCRIBERS #####################################  
+		rospy.Subscriber("puzzlebot_1/wl", Float32, self.wl_cb)  
+		rospy.Subscriber("puzzlebot_1/wr", Float32, self.wr_cb)
+		rospy.Subscriber("odom", Odometry, self.update_pos_cb) 
+		rospy.Subscriber("puzzlebot_1/scan", LaserScan, self.laser_cb) 
+		#********** FRECUENCIA Y SAMPLING TIME **********###  
+		freq = 20 
+		rate = rospy.Rate(freq) #freq Hz
 
-        self.closest_angle = 0.0
-        self.closest_range = np.inf
+		while  rospy.get_time () == 0:
+			print('NO simulated time')
+		print('i got a valid time')
+		################ MAIN LOOP ################  
+		while not rospy.is_shutdown():			
+			if self.lidar_received:
+				######################## PRIMER ESTADO
+				if self.current_state == 'Stop':
+					if self.goal_received:
+						print("Change to Go to goal from stop") 
+						self.current_state = "GoToGoal" 
+						self.goal_received = 0
+					else:
+						v_msg.linear.x = 0.0 
+						v_msg.angular.z = 0.0
 
-        self.hp = 0.0
-        self.lp = 0.0
-        self.tolerance = 0.05
-        self.min_progress = -0.000001
+				######################## SEGUNDO ESTADO
+				elif self.current_state == 'GoToGoal':
+					# CALCULAR VEL Y THETA PARA IR AL GOAL. CALCULAR E_THETA PARA REALIZAR COMPARACION
+					v, w, e_theta = self.move_to_goal()
+					# ASIGNAR VEL Y THETA PARA IR AL GOAL
+					v_msg.linear.x = v
+					v_msg.angular.z = w
+					# CALCULAR ANGULO DE THETAFWC PARA LUEGO REALIZAR COMPARACION DE GIRO EN FW
+					wfwc = self.calculate_thetafwc() 
+					# PRIMERA COMPARACION EN GO TO GOAL ----
+					# GIRA EN CLOCKWISE O HACIA MANECILLAS DEL RELOJ
+					if self.closest_range < d_fw and abs(wfwc - e_theta) <= np.pi/2:
+						# CALCULAR DISTANCIA ANTERIOR, h1
+						self.dGTG_h = np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2)
+						print("distancia anterior de GoalToGoal en FWC" + str(self.dGTG_h))
+						# CAMBIAMOS DE INMEDIATO DE ESTADO
+						self.current_state = 'FollowingWallClockwise'
+			
+					# SEGUNDA COMPARACION EN GO TO GOAL ----
+					# GIRA EN COUNTER CLOCKWISE O HACIA MANECILLAS CONTRARIAS DEL RELOJ
+					elif self.closest_range < d_fw and abs(wfwc - e_theta) > np.pi/2:
+						# CALCULAR DISTANCIA ANTERIOR, h1
+						self.dGTG_h = np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2)
+						print("distancia anterior de GoalToGoal en FCC" + str (self.dGTG_h))
+						# CAMBIAMOS DE INMEDIATO DE ESTADO
+						self.current_state = 'FollowingWallCounterClockwise'
+					
+					# TERCERA COMPARACION EN GO TO GOAL ----
+					# DETENER EL ROBOT
+					elif np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2) < self.target_position_tolerance:
+						
+						self.current_state = 'Stop'
+				
+				######################## TERCER ESTADO
+				elif self.current_state == 'FollowingWallClockwise':
 
-        self.v = 0.0
-        self.w = 0.0
+					# CALCULAR E_THETA PARA LUEGO REALIZAR COMPARACIONES
 
-        self.fw = 0.33
+					v,w,e_theta = self.move_to_goal()
 
-        self.current_state = 'GTG'
-        self.set_point_cb()
-        self.previous_distance_to_goal = np.inf
+					# DEFINIR DISTANCIA ACTUAL EN TIEMPO REAL
 
-        while not rospy.is_shutdown():
-             if self.lidar_r and self.goal_r:
-                  self.get_closest_range()
-                  #self.get_theta_ao()
-                  #self.get_theta_gtg()
-                  #self.get_theta_fw(True)
-                  d_t = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
+					d_GTG = np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2)
 
-                  if self.at_goal():
-                       print("Done")
-                       self.v = 0.0
-                       self.w = 0.0
-                  elif self.current_state == "GTG":
-                       print(self.current_state)
-                       if self.closest_range < self.fw:
-                            if abs(self.closest_angle - self.e_theta) <= np.pi/2:
-                                 self.current_state = "CW"
-                            elif abs(self.closest_angle - self.e_theta) > np.pi/2:
-                                 self.current_state = "CCW"
-                       else:
-                            self.gtg_control()
-                  elif self.current_state == "CW":
-                       print(self.current_state)
-                       self.fw_control(True)
-                       if self.made_progress(d_t) and abs(self.theta_fw - self.e_theta) < np.pi/2:
-                            self.current_state = "GTG"
-                       elif self.at_goal():
-                            self.current_state = "Stop"
-                       else:
-                            self.fw_control(True)
-                  elif self.current_state == "CCW":
-                       print(self.current_state)
-                       self.fw_control(False)
-                       if self.made_progress(d_t) and abs(self.theta_ao - self.e_theta) < np.pi/2:
-                            self.current_state = "GTG"
-                       elif self.at_goal():
-                            self.current_state = "Stop"
-                       else:
-                            self.fw_control(False)
+					# REALIZAR FOLLOW WALL EN CLOCKWISE
 
-             vel_msg.linear.x = self.v
-             vel_msg.angular.z = self.w
-             self.pub_cmd_vel.publish(vel_msg)
-             rate.sleep()
+					vfw, wfw = self.following_wallc()
+					
+					# ASIGNAR VELOCIDADES CORRESPONDIENTES DEL ALG CLOCKWISE
+					v_msg.linear.x = vfw
+					v_msg.angular.z = wfw
+
+	
+					# CALCULAR ANGULO AVOIDOBSTACTLES PARA DEFINIR CLEAR SHOT
+					
+					theta_AO = self.closest_angle + np.pi
+					theta_AO = np.arctan2(np.sin(theta_AO), np.cos(theta_AO)) # arctan
+
+					# PRIMERA COMPARACION PARA ESTADO DE FWC ----
+					# REALIZAR CLEAR SHOT Y PROGRESS WITHFATGUARDS PARA IR A GOAL TO GOAL
+
+					print("distancia actual " + str(d_GTG) + "dis anterior " + str(self.dGTG_h) + "minpro " + str(self.minprogress))
+					if abs(theta_AO - e_theta) < np.pi/2 and d_GTG < abs(self.dGTG_h - self.minprogress):
+						
+						self.current_state = 'GoToGoal'
+					
+					# SEGUNDA COMPARACION PARA ESTADO DE FWC ----
+					# DETENER EL ROBOT !!!
+					elif np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2) < self.target_position_tolerance:
+						
+						self.current_state = 'Stop'
+						
+				######################## CUARTO ESTADO	
+				elif self.current_state == "FollowingWallCounterClockwise":
+					
+
+					# CALCULAR E_THETA PARA LUEGO REALIZAR COMPARACIONES
+					
+					v,w,e_theta = self.move_to_goal()
+
+					# DEFINIR DISTANCIA ACTUAL EN TIEMPO REAL
+
+					d_GTG = np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2)
+
+					vfw, wfw = self.following_wallcc()
+					v_msg.linear.x = vfw
+					v_msg.angular.z = wfw
+
+					
+					# CALCULAR EL ANGULO DE AVOIDOBSTACLES PARA DEFINIR CLEAR SHOT
+					theta_AO = self.closest_angle + np.pi
+					theta_AO = np.arctan2(np.sin(theta_AO), np.cos(theta_AO)) # arctan
+
+					# REALIZAR CLEAR SHOT Y PROGRESSWITHFATGUARDS PARA IR A GO TO GOAL
+
+					#print("THETA_AO " + str(theta_AO))
+					#print("E_THETA " + str(e_theta))
+					#print("D_GTG " + str(d_GTG))
+					#print("DGTG_h " + str(self.dGTG_h))
+					#print("minprogress " + str(self.minprogress))
+					print("distancia actual " + str(d_GTG) + "dis anterior " + str(self.dGTG_h) + "minpro " + str(self.minprogress))
+					if abs(theta_AO - e_theta) < np.pi/2 and d_GTG < abs(self.dGTG_h - self.minprogress):
+						self.current_state = 'GoToGoal'
+					elif np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2) < self.target_position_tolerance:
+						self.current_state = 'Stop'
+			
+			self.pub_cmd_vel.publish(v_msg) # PUBLICAMOS VELOCIDADES LINEALES Y ANGULARES AL ROBOT
+			print(self.current_state) # IMPRIMIMOS ESTADO ACTUAL
+			rate.sleep()
+	
+	def update_pos_cb(self, odom):
+		self.x_r = odom.pose.pose.position.x # POSICION EN X
+		self.y_r = odom.pose.pose.position.y # POSICION EN Y
+		
+		# OBTENER QUATERNION
+		orientation_q = odom.pose.pose.orientation
+		orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+
+		# CONVERTIR QUATERNION A ANGULO DE EULER
+		_, _, self.theta_r = euler_from_quaternion(orientation_list)
+
+		#print("x r", self.x_r, " y r", self.y_r, " theta r", self.theta_r)
+
+	def move_to_goal(self): # FUNCION PARA CALCULAR VELOCIDADES LINEALES Y ANGULARES AL GOAL
+		d = np.sqrt((self.x_target - self.x_r) ** 2 + (self.y_target - self.y_r) ** 2) # CALCULAR DISTANCIA AL GOAL
+		theta_G = np.arctan2(self.y_target - self.y_r, self.x_target - self.x_r) # CALCULAR ANGULO THETA G
+	
+		e_theta = theta_G - self.theta_r # CALCULAR ANGULO E_THETA
+		e_theta = np.arctan2(np.sin(e_theta), np.cos(e_theta)) # LIMITAR ANGULO DE -PI A PI
+
+		v = self.k_v*d
+		w = self.k_w*e_theta
+
+		print("distancia actual " + str(d) + "target tolerance " + str(self.target_position_tolerance))
+
+		return v, w, e_theta
+
+	def calculate_thetafwc(self): #FUNCION PARA CALCULAR ANGULO THETAFWC PARA PODER REALIZAR COMPARACION DE GO TO GOAL A FOLLOW WALL
+		
+		theta_AO = self.closest_angle + np.pi 
+		theta_AO = np.arctan2(np.sin(theta_AO), np.cos(theta_AO)) # ARCTAN
+		wfwc = -(np.pi/2) + theta_AO
+		wfwc = np.arctan2(np.sin(wfwc), np.cos(wfwc))
+
+		return wfwc
+
+	def following_wallc(self):  # FUNCION PARA FOLLOW WALL EN SENTIDO DE MANECILLAS DEL RELOJ
+
+		theta_AO = self.closest_angle + np.pi 
+		theta_AO = np.arctan2(np.sin(theta_AO), np.cos(theta_AO)) # ARCTAN
+		wfwc = -(np.pi/2) + theta_AO
+		wfwc = np.arctan2(np.sin(wfwc), np.cos(wfwc))
+
+		vfw = 0.12 # CONSTANTE DE VELOCIDAD LINEAL
+		kw = 3.5 # GANANCIA PARA GIRO EN W
+		wfw = kw * wfwc 
+		return vfw, wfw
+
+	
+	def following_wallcc(self):  # FUNCION PARA FOLLOW WALL EN SENTIDO DE MANECILLAS DEL RELOJ
+		
+		theta_AO = self.closest_angle + np.pi 
+		theta_AO = np.arctan2(np.sin(theta_AO), np.cos(theta_AO)) # ARCTAN
+		wfwcc = np.pi/2 + theta_AO
+		wfwcc = np.arctan2(np.sin(wfwcc), np.cos(wfwcc))
 
 
-    def at_goal(self):
-        print(abs(self.xr - self.xg), abs(self.yr - self.yg))
-        return (abs(self.xr - self.xg) < 0.05) and (abs(self.yr - self.yg) < 0.05)
-    
-    def made_progress(self, current_distance):
-        progress = self.previous_distance_to_goal - current_distance
-        self.previous_distance_to_goal = current_distance
-        return abs(progress) > 0.01
+		vfw = 0.12 # CONSTANTE DE VELOCIDAD LINEAL
+		kw = 3.5 # GANANCIA PARA GIRO EN W
+		wfw = kw * wfwcc 
+		return vfw, wfw
 
-    def get_closest_range(self):
-        '''# Create a copy of the ranges to avoid modifying the original data
-        limited_ranges = np.array(self.lidar_msg.ranges)
+	def laser_cb(self, msg):
+		
+		
+		## This function receives a message of type LaserScan and computes the closest object direction and range 
+		self.closest_range = min(msg.ranges) 
+		idx = msg.ranges.index(self.closest_range)
+		self.closest_angle = msg.angle_min + idx * msg.angle_increment 
+		# Limit the angle to [-pi,pi]
+		self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle))
+		#print("ang" + str(self.closest_angle))
+		self.lidar_received = 1
 
-        # Filter out ranges that exceed the max_range
-        limited_ranges[limited_ranges > 4] = np.inf  # Use np.inf to ignore these values
+		"""
+		#This function returns the closest object to the robot 
 
-        # Find the closest range within the limited ranges
-        min_idx = np.argmin(limited_ranges)
-        self.closest_range = limited_ranges[min_idx]
-        self.closest_angle = self.lidar_msg.angle_min + min_idx * self.lidar_msg.angle_increment
-        self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle))'''
+		#This functions receives a ROS LaserScan message and returns the distance and direction to the closest object 
 
-        new_angle_min = -np.pi/2.0
-        ranges_size = len(self.lidar_msg.ranges)
-        cropped_ranges = self.lidar_msg.ranges[int((ranges_size)/4):3*int((ranges_size)/4)]
-        cropped_ranges = np.roll(cropped_ranges, int(len(cropped_ranges)/2 + 1))
-        min_idx = np.argmin(cropped_ranges)
-        self.closest_range = cropped_ranges[min_idx]
-        closest_angle = new_angle_min + min_idx * self.lidar_msg.angle_increment
-        # limit the angle to [-pi, pi]
-        self.closest_angle = np.arctan2(np.sin(closest_angle), np.cos(closest_angle))
+		#returns  closest_range [m], closest_angle [rad], 
+		
+		new_angle_min = -np.pi/2.0  
 
-    '''def get_theta_gtg(self):
-        tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
-        self.e_theta = tg - self.tr'''
+		ranges_size=len(msg.ranges) 
 
-    def gtg_control(self):
-        kv_m = 0.16
-        kw_m = 0.08
+		cropped_ranges = msg.ranges[int(ranges_size/4):3*int(ranges_size/4)] 
 
-        av = 2.0
-        aw = 2.0
+		min_idx = np.argmin(cropped_ranges) 
 
-        e_d = np.sqrt((self.xg - self.xr) ** 2 + (self.yg - self.yr) ** 2)
-        tg = np.arctan2(self.yg - self.yr, self.xg - self.xr)
-        e_theta = tg - self.tr
-        e_theta = np.arctan2(np.sin(e_theta), np.cos(e_theta))
+		self.closest_range = cropped_ranges[min_idx] 
 
-        kw = kw_m * (1 - np.exp(-aw * e_theta ** 2)) / abs(e_theta)        
-        self.w = kw * e_theta
+		self.closest_angle = new_angle_min + min_idx * msg.angle_increment 
 
-        if abs(e_theta) < np.pi/8:
-            self.v = 0
-        else:
-            kv = kv_m * (1 - np.exp(-av * e_d ** 2))/abs(e_d)
-            self.v = kv * e_d
+		# limit the angle to [-pi, pi]
 
-    def fw_control(self, clockwise):
-        theta_ao = self.closest_angle + np.pi/2
-        self.theta_ao = np.arctan2(np.sin(theta_ao), np.cos(theta_ao))
-        if clockwise:
-            theta_fw = -np.pi / 2 + self.theta_ao
-        else:
-            theta_fw = np.pi / 2 + self.theta_ao
-        self.theta_fw = np.arctan2(np.sin(theta_fw), np.cos(theta_fw))
+		self.closest_angle = np.arctan2(np.sin(self.closest_angle), np.cos(self.closest_angle)) 
+		
+		print("range " + str(self.closest_range))
+		print("angle " + str(self.closest_angle))
 
-        kw = 1.0
-        self.v = 0.08
-        self.w = kw * self.theta_fw
+		"""
+		
 
-    def laser_cb(self, msg):
-        self.lidar_msg = msg
-        self.lidar_r = True
+	def wl_cb(self, wl):  
+		## This function receives a the left wheel speed [rad/s] 
+		self.wl = wl.data 
 
-    def set_point_cb(self):
-        '''#Map 1
-        self.xg = 1.5
-        self.yg = 1.2'''
 
-        #Map 1
-        self.xg = 2.3
-        self.yg = 2.0
+	def wr_cb(self, wr):  
+		## This function receives a the right wheel speed.  
+		self.wr = wr.data  
+ 
 
-        '''Map 2
-        self.xg = -1.15
-        self.yg = 1.5'''
-
-        '''Map 3
-        self.xg = 0.0
-        self.yg = -2.5'''
-
-        '''Map 4
-        self.xg = 0.0
-        self.yg = -2.5'''
-        self.goal_r = True
-
-    def odom_cb(self, msg):
-        orientation = [
-            msg.pose.pose.orientation.x,
-            msg.pose.pose.orientation.y,
-            msg.pose.pose.orientation.z,
-            msg.pose.pose.orientation.w
-            ]
-        euler = euler_from_quaternion(orientation)
-
-        self.xr = msg.pose.pose.position.x
-        self.yr = msg.pose.pose.position.y
-        self.tr = euler[2]
-
-    def wr_cb(self, msg):
-        self.wr = msg
-
-    def wl_cb(self, msg):
-        self.wl = msg
-
-    def cleanup(self): 
-            #This function is called just before finishing the node 
-            # You can use it to clean things up before leaving 
-            # Example: stop the robot before finishing a node.   
-            vel_msg = Twist()
-            self.pub_cmd_vel.publish(vel_msg)
-
+	def cleanup(self):  
+		#This function is called just before finishing the node  
+		# You can use it to clean things up before leaving  
+		# Example: stop the robot before finishing a node.    
+		vel_msg = Twist()
+		self.pub_cmd_vel.publish(vel_msg) 
+ 
 ############################### MAIN PROGRAM ####################################  
+
 if __name__ == "__main__":  
-    Bug0()  
+	rospy.init_node("bug_0", anonymous=True)  
+	AutonomousNav()
