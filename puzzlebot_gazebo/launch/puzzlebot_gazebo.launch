@@ -22,9 +22,9 @@
         <arg name="pos_theta" default="-1.57"/> -->
 
          <!-- Posicion del puzzlebot mapa minichallenge -->
-        <arg name="pos_x" default="0.79"/>
-        <arg name="pos_y" default="-0.63"/>
-        <arg name="pos_theta" default="0.0"/>
+        <arg name="pos_x" default="2.9"/>
+        <arg name="pos_y" default="0.3"/>
+        <arg name="pos_theta" default="1.5708"/>
 
 
         <!-- Gazebo Parameters -->
