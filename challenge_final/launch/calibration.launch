@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<launch>
+	<include file = "$(find puzzlebot_gazebo)/launch/puzzlebot_gazebo.launch"/> 
+        <include file = "$(find puzzlebot_control)/launch/puzzlebot_control.launch"/> 
+        <node name = "image_republish" pkg = "image_transport" type = "republish" args = "raw in:=/puzzlebot_1/camera/image_raw compressed out:=puzzlebot_1/camera/image"/>
+	<node name="camera_info_publisher" pkg="challenge_final" type="yaml_to_camera_info_publisher.py" output="screen"/>
+	<include file="$(find challenge_final)/launch/aruco_detect.launch"/>
+	<node name="DetectR" pkg="challenge_final" type="aruco_detect.py" output="screen"/>
+        <node name = "rqt_image_view" pkg = "rqt_image_view" type = "rqt_image_view"/>
+</launch>
+
+	
