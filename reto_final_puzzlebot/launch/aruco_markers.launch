@@ -1,0 +1,24 @@
+<launch> 
+  <!-- namespace for camera input --> 
+  <arg name="camera_topic" default="/image_compressed/compressed"/> 
+  <arg name="camera_info" default="/camera_info"/> 
+  <arg name="fiducial_len" default="1.0"/> 
+  <arg name="ignore_fiducials" default="" /> 
+  <arg name="fiducial_len_override" default=""/> 
+
+
+  <node pkg="image_transport" type="republish" name="compress_img" args="raw in:=/puzzlebot_1/camera/image_raw out:=/image_compressed"/>
+ 
+  <node pkg="aruco_detect" name="aruco_detect" type="aruco_detect" output="screen" respawn="false"> 
+    <param name="image_transport" value="compressed"/> 
+    <param name="publish_images" value="true" /> 
+    <param name="fiducial_len" value="$(arg fiducial_len)"/> 
+    <param name="dictionary" value="16"/> 
+    <param name="do_pose_estimation" value="true"/> 
+    <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/> 
+    <param name="fiducial_len_override" value="$(arg camera_topic)"/> 
+    <remap from="/camera/compressed" to="$(arg camera_topic)"/> 
+    <remap from="/camera_info" to="$(arg camera_info)"/> 
+  </node> 
+  
+</launch>

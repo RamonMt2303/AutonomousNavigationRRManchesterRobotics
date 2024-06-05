@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <include file="$(find rplidar_ros)/launch/rplidar_a1.launch"/>
+
+    <node pkg="tf" type="static_transform_publisher" name="laser_to_base_link" args="0 0 0 0 0 0 base_link rplidar_frame 50" />
+    
+    <include file="$(find calibration_puzzlebot)/launch/calibration.launch"/>
+
+    <!--<include file="$(find reto_hilda)/launch/aruco_markers.launch"/>-->
+
+    <node name="DetectR" pkg = "reto_hilda" type = "aruco_detect.py" output = "screen"/>
+    
+    <!--<node name="localisation" pkg="reto_hilda" type="localisation.py" output="screen"/>-->
+
+    <node name="bug2" pkg="reto_hilda" type="bug2.py" output="screen"/>
+
+</launch>
